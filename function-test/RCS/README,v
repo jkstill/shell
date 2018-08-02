@@ -1,0 +1,78 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2016.01.01.23.34.57;	author jkstill;	state Exp;
+branches;
+next	;
+
+
+desc
+@initial
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@
+Does calling functions in the following manner to return
+strings add significant overhead?
+
+Or does bash optimize this away?
+
+Let's find out.
+
+################
+## t1.sh
+################
+
+Uses a global variable to return a value
+
+10k iterations:
+
+> time ./t1.sh 10000
+test type: functional run
+RVAL:
+RVAL: jeremiah was a bullfrog
+i: 10000
+i: 0
+
+real    0m0.074s
+user    0m0.064s
+sys     0m0.012s
+
+
+################
+## t2.sh
+################
+
+Uses a subshell to return the value.
+
+> time ./t2.sh 10000
+test type: functional run
+RVAL:
+RVAL: jeremiah was a bullfrog
+i: 10000
+i: 0
+
+real    0m2.430s
+user    0m0.340s
+sys     0m0.668s
+
+#########################
+
+It is clear that bash is not doing any optimizations for returning values with a subshell.
+
+The global variable method is 32x faster.
+
+
+
+
+@

@@ -1,0 +1,42 @@
+
+This is fast, but depends on many global variables:
+
+
+f() {
+   RVAL='jeremiah was a bullfrog'
+}
+
+f
+echo "RVAL: $RVAL"
+
+Each function needs a global variable for its return values.
+
+Using the following method is much neater, but suffers from performane issues.
+(see ../function-test/README)
+
+f() {
+   echo 'jeremiah was a bullfrog'
+}
+
+RVAL=$(f)
+
+
+An alternative might be something like this:
+(Bash only)
+
+declare -A rVals
+
+f() {
+   rVals[$FUNCNAME]='jeremiah was a bullfrog'
+}
+
+
+f
+echo "Value: " ${rVals['f']}
+
+There is only 1 global variable, the rVals associative array.
+
+Using the name of the called function as a key values retrieves the most recent value returned.
+
+see f-retvals.sh
+

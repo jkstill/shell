@@ -1,0 +1,46 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2017.07.21.00.29.46;	author jkstill;	state Exp;
+branches;
+next	;
+
+
+desc
+@initial
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@#!/bin/bash
+
+cat <<EOF
+
+use trap to run a shell script in the background without nohup
+
+EOF
+
+logFile=mylog.log
+sleepTime=60
+maxIterations=100
+
+# ignore hangup - similar to nohup (no hangup )
+trap -- '' SIGHUP
+
+for i in $(seq 1 $maxIterations)
+do
+	echo run some command here
+	sleep $sleepTime
+done >> $logFile  &
+
+
+@

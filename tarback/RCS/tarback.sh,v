@@ -1,0 +1,92 @@
+head	1.3;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.3
+date	2017.08.28.20.03.35;	author jkstill;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2003.11.18.07.22.29;	author jkstill;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2003.11.16.02.02.48;	author jkstill;	state Exp;
+branches;
+next	;
+
+
+desc
+@initial
+@
+
+
+1.3
+log
+@display filename when finished
+@
+text
+@:
+
+DIR=$1
+
+DEST=~/tarback
+
+[ -z "$DIR" ] && {
+	echo please supply a directory name to backup
+	exit 1
+}
+
+[ -r "$DIR" ] || {
+	echo unable to read $DIR
+	exit 3
+}
+
+TAR="tar cvfz "
+DATE=$(date +%Y-%m-%d_%H%M)
+BASEDIR=$(basename $DIR)
+TARFILE=${BASEDIR}_${DATE}.tgz
+
+[ -x $DEST ] || { mkdir $DEST; }
+
+[ -x $DEST ] || { 
+	echo unable to create $DEST
+	exit 2
+}
+
+CMD="$TAR $DEST/$TARFILE $DIR"
+
+echo $CMD
+$CMD
+
+echo 
+echo File: $DEST/$TARFILE
+echo
+
+
+@
+
+
+1.2
+log
+@remove : in file name - makes tar crazy
+@
+text
+@d34 5
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d18 1
+a18 1
+DATE=$(date +%Y-%m-%d_%H:%M)
+@
