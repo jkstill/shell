@@ -4,11 +4,81 @@
 # functions and variables that must be at the top
 #####################################################
 
+
+hdr () {
+typeset msg="$*"
+echo "============================================="
+echo "$msg"
+echo "============================================="
+}
+
+dryRun='T'
+
+setOraEnv () {
+	typeset mysid=$1
+	ORAENV_ASK=NO
+	export ORACLE_SID=$mysid
+	. /usr/local/bin/oraenv >/dev/null
+}
+
+
+# T for True
+dryRunEnable () {
+	dryRun='T'
+}
+
+# F for False
+dryRunDisable () {
+	dryRun='F'
+}
+
+dryRunStatus () {
+	echo $dryRun
+}
+
+verboseOn () {
+	set -x
+}
+
+verboseOff () {
+	set +x
+}
+
 getTimeStamp () {
 	echo $(date '+%Y%m%d_%H:%M:%S')
 }
 
 scriptLog=/tmp/test-log-$(getTimeStamp).log
+
+# validate file existence and mode
+# valid modes are x and r
+validateFile () {
+	typeset fileName=$1
+	typeset mode=$2
+	
+	if [[ -z $fileName ]]; then
+		echo "Empty filename sent to validate file"
+		return 1
+	fi
+	
+	if [[ -z $mode ]]; then
+		echo "Empty mode sent to validate file"
+		return 2
+	fi
+	
+	if ( ! echo $mode | grep '[rx]' >/dev/null); then
+		echo "invalid mode of $mode sent to validateFile"
+		return 3
+	fi
+
+	[ -${mode} "$fileName" ] || {
+		return 4
+	}
+
+	return 0
+
+}
+
 
 logger () {
 
@@ -41,10 +111,40 @@ chkCmd () {
 			pathCmd= $(which $baseCmd)
 			msg="The command $baseCmd was found in the path at $pathCmd but will not be used"
 			echo "$msg"
-			logger "msg"
+			logger "$msg"
 		fi
 		exit 1
 	}
+}
+
+# just make sure we are running on the server we think we are
+# validateServer('some.server.com')
+# the script will exit with error if hostname does not match
+
+validateServer() {
+	typeset serverToChk=$1
+	currentHostName=$(hostname| tr -d '\n')
+
+	if [ "$currentHostName" != "$serverToChk" ]; then
+		typeset msg="Incorrect server detected!  Requested $serverToChk, but this is $currentHostName"
+		echo "$msg"
+		logger "$msg"
+		exit 2
+	fi
+}
+
+runCmd () {
+	typeset cmdToRun="$*"
+
+
+	if [[ $(dryRunStatus) == 'T' ]]; then
+		logger "CMD Dry Run: $cmdToRun"
+		hdr "CMD Dry Run: $cmdToRun"
+	else
+		logger "CMD: $cmdToRun"
+		eval $cmdToRun
+		return $?
+	fi
 }
 
 ######################################
@@ -55,13 +155,21 @@ chkCmd () {
 ASMCMD=$ORACLE_HOME/bin/asmcmd
 chkCmd $ASMCMD
 
-asmDirsToClear=(
+: << 'COMMENT'
+
+Example of setting up ASM directories to work with
+
+typeset -a asmDirsToChk
+
+asmDirsToChk=(
 	+STG_DATA/STG1/DATAFILE
 	+STG_DATA/STG1/CONTROLFILE
 	+STG_DATA/STG1/TEMPFILE
 	+STG_DATA/STG1/ONLINELOG
 	+STG_DATA/STG1/ARCHIVELOG/*
 )
+
+COMMENT
 
 
 ####################
@@ -87,6 +195,28 @@ chkCmdResults () {
 	logger "$resultsMsg";
 
 	echo $exitCode
+}
+
+##########################################################
+# chkDateFormat
+# validate the date format is what is expected
+# does not attempt to validate the correctness of the date
+# just checks the format
+# return values
+# 0: success
+# 1: failed
+##########################################################
+
+chkDateFormat () {
+	typeset myDate="$*"
+
+	# matches 20NN-NN-NN NN:NN:NN
+	typeset dateFormatRE='^20[[:digit:]]{2}-[[:digit:]]{2}-[[:digit:]]{2} [[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}$'
+
+	typeset rv
+	rv=$(echo $myDate | grep -E "$dateFormatRE" >/dev/null 2>&1)
+
+	return $?
 }
 
 
@@ -127,8 +257,8 @@ checkAsmDirs () {
 			typeset msg="checkAsmDirs: Failed to find Directory $dir in checkAsmDirs - exit code $results"
 			logger "$msg"
 			logger "checkAsmDirs: results - $resultTxt"
-			echo 1
-			return
+			#echo 1
+			return 1
 		fi
 
 		logger "Checking for ASM Files in: $dir"
@@ -139,6 +269,7 @@ checkAsmDirs () {
 		logger "checkAsmDirs dir files CMD: $CMD"
 
 		resultTxt=$($CMD 2>&1)
+		echo "result text: $resultTxt"
 		rv=$?
 		results=$(chkCmdResults $rv 255 $CMD)
 
@@ -147,13 +278,12 @@ checkAsmDirs () {
 			typeset msg="checkAsmDirs: Failed to find Directory $dir in checkAsmDirs - exit code $results"
 			logger "checkAsmDirs: $msg"
 			logger "checkAsmDirs: results - $resultTxt"
-			echo 1
-			return
+			return 1
 		fi
 
 	done
 
-	echo 0
+	return 0
 }
 
 ########################################
@@ -172,7 +302,7 @@ clearAsmDirs () {
 
 		# clear directory of files
 		# replace with rm, cuz I do not want to test this here
-		CMD="$ASMCMD ls $dir/*"
+		CMD="$ASMCMD ls $dir"
 		logger "clearAsmDirs CMD: $CMD"
 
 		typeset resultTxt results rv
@@ -190,48 +320,11 @@ clearAsmDirs () {
 		if [[ $results -ne 0 ]]; then
 			# decide to return or exit
 			typeset msg="Failed to clear Directory $dir in clearAsmDirs - exit code $results"
-			echo 1
-			return
+			return 1
 		fi
 
 	done
 
-	echo 0
+	return 0
 }
-
-chkResults=$(checkAsmDirs ${asmDirsToClear[*]})
-
-echo chkResults: $chkResults
-
-if [[ chkResults -eq 0 ]]; then
-	echo "checkAsmDirs has succeeded"
-else
-	echo
-	echo "Something has gone wrong with checkAsmDirs"
-	echo "Please see log $scriptLog"
-	echo
-	exit $chkResults
-fi
-
-
-chkResults=$(clearAsmDirs ${asmDirsToClear[*]})
-
-echo chkResults: $chkResults
-
-if [[ chkResults ]]; then
-	echo "clearAsmDirs has succeeded"
-else
-	echo
-	echo "Something has gone wrong with clearAsmDirs"
-	echo "Please see log $scriptLog"
-	echo
-	exit $chkResults
-fi
-
-echo scriptLog: $scriptLog
-
-
-cat $scriptLog
-echo ==========================
-
 
