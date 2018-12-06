@@ -28,6 +28,28 @@ colors[lightMagenta]=1
 colors[lightCyan]=1
 colors[white]=1
 
+
+# this is here only for test
+declare -a colorNum
+colorNum[0]=default
+colorNum[1]=black
+colorNum[2]=red
+colorNum[3]=green
+colorNum[4]=yellow
+colorNum[5]=blue
+colorNum[6]=magenta
+colorNum[7]=cyan
+colorNum[8]=lightGray
+colorNum[9]=darkGray
+colorNum[10]=lightRed
+colorNum[11]=lightGreen
+colorNum[12]=lightYellow
+colorNum[13]=lightBlue
+colorNum[14]=lightMagenta
+colorNum[15]=lightCyan
+colorNum[16]=white
+
+
 # control
 
 # reset all attributes
@@ -91,12 +113,12 @@ colorPrint () {
 	fg=${fg:-'black'}
 	msg=${msg:-'NA'}
 
-	if [[ ${colors[$fg]} -ne 1 ]]; then
+	if [[ -z ${colors[$fg]} ]]; then
 		echo "Warning: colorPrint called with unknown foreground color '$fg' - using default"
 		fg='default'
 	fi
 
-	if [[ ${colors[$bg]} -ne 1 ]]; then
+	if [[ -z ${colors[$bg]} ]]; then
 		echo "Warning: colorPrint called with unknown background color '$bg' - using default"
 		bg='default'
 	fi
@@ -111,6 +133,9 @@ colorPrint () {
 
 }
 
+
+#: <<'DISABLE-TEST'
+
 colorPrint fg=red bg=white msg="This is a test message in red font on white background"
 colorPrint fg=blue bg=white msg="This is a test message blue font on white background"
 colorPrint fg=black bg=yellow msg="This is a test message black font on yellow background"
@@ -122,7 +147,31 @@ t="this is a line with a linefeed\nthere it was!"
 
 colorPrint fg=white bg=magenta msg="$t"
 
+bgCount=${#colors[@]}
+(( bgCount-- ))
+fgCount=$bgCount
+
+echo fgCount: $fgCount
+echo bgCount: $bgCount
+
+for bgIDX in $( seq 0 $bgCount )
+do
+
+	for fgIDX in $( seq 0 $fgCount )
+	do
+		if [[ $fgIDX -ne $bgIDX ]]; then
+			#echo "foreground: ${colorNum[$fgIDX]}"
+			#echo "background: ${colorNum[$bgIDX]}"
+
+			colorPrint fg="${colorNum[$fgIDX]}" bg="${colorNum[$bgIDX]}" msg="${colorNum[$fgIDX]} text on ${colorNum[$bgIDX]} background"
+		fi
+	done
+
+done
+
 echo "-- end of testing --"
+
+#DISABLE-TEST
 
 
 
