@@ -2,8 +2,19 @@
 # ansi-color.sh
 # Jared Still still@pythian.com jkstill@gmail.com
 # Pythian 2018
-
-# see for more codes:
+# 
+# This script works with Bash
+# it does not work with Korn Shell as ksh seems unable to process color codes
+# while tput is useful for cursor manipulation, it is not nearly as useful for setting colors 
+# as is setting colors directly with escape codes
+# so, there is not a ksh version of this scriopt
+#
+# show a display of all color combinations to see which are easist to read
+# by setting SHOW_COLORS to any value
+# eg.
+#    SHOW_COLORS=bozo bash ansi-color.sh
+#
+# for more codes:
 # https://misc.flogisoft.com/bash/tip_colors_and_formatting
 
 # source this file
@@ -29,7 +40,10 @@ colors[lightCyan]=1
 colors[white]=1
 
 
-# this is here only for test
+# this is here only for displaying colors with SHOW_COLORS environment variable set
+# set it to any value
+# SHOW_COLORS=bozo bash ansi-color.sh
+
 declare -a colorNum
 colorNum[0]=default
 colorNum[1]=black
@@ -103,49 +117,89 @@ ansiCodes[whiteBG]="\e[107m"
 setColor () {
 	#echo "ansi Color: $1"
 	echo -ne ${ansiCodes[$1]}
+	# can also be done with printf, but echo is used as it is a bash built in
+	#printf "%b" "${ansiCodes[$1]}"
 }
+
+: << 'colorPrint-Docs'
+
+ call colorPrint as shown:
+
+ colorPrint fg=<color> bg=<color> lf=[0|1] msg='text to display'
+
+ any parameters that are not specified will be set to default values
+
+ fg: foreground color
+ bg: background color
+ lf: 
+   0 - no linefeed 
+	1 - linefeed
+ msg: text to print
+
+colorPrint-Docs
 
 colorPrint () {
 
-	local "${@}"
+	declare "${@}"
 
-	bg=${bg:-'yellow'}
-	fg=${fg:-'black'}
-	msg=${msg:-'NA'}
+	declare bg=${bg:-'yellow'}
+	declare fg=${fg:-'black'}
+	declare msg=${msg:-''}
+	declare lf=${lf:-1}
+
+	# get setting for  'set -u'  and save
+	# seen in 'set -o' as 'nounset'
+	# the '$-' variable contains a letter for each setting enabled with set -something
+	# this operations removes the 'u' if it exists, and compares to the full string
+	# if they are different then the parameter was set
+	#
+	# set to 0 if on
+	# set to 1 if off
+
+	[[ ${-/u} != ${-} ]] && nounset=0 || nounset=1
+
+	# do not exit on unbound variables
+	# this allows checking for the existing of this value in the array
+	set +u
 
 	if [[ -z ${colors[$fg]} ]]; then
-		echo "Warning: colorPrint called with unknown foreground color '$fg' - using default"
+		# colors hard coded as recursive call does not work properly
+		printf "${ansiCodes[darkGrayBG]}${ansiCodes[lightYellowFG]}Warning: colorPrint called with unknown foreground color '$fg' - using default${_RESET}\n"
 		fg='default'
 	fi
 
 	if [[ -z ${colors[$bg]} ]]; then
-		echo "Warning: colorPrint called with unknown background color '$bg' - using default"
+		printf "${ansiCodes[darkGrayBG]}${ansiCodes[lightYellowFG]}Warning: colorPrint called with unknown background color '$bg' - using default${_RESET}\n"
 		bg='default'
 	fi
 
-	#${fg}FG
-	#${bg}BG
+	[[ $nounset -eq 0 ]] && set -u
+
 	setColor ${fg}FG
 	setColor ${bg}BG
 	printf "$msg"
+
 	reset
-	printf "\n"
+	[[ $lf -gt 0 ]] && printf "\n"
 
 }
 
 
-#: <<'DISABLE-TEST'
+# execute with
+# SHOW_COLORS=1 bash ansi-color.sh
+SHOW_COLORS=${SHOW_COLORS:-''}
 
-colorPrint fg=red bg=white msg="This is a test message in red font on white background"
-colorPrint fg=blue bg=white msg="This is a test message blue font on white background"
-colorPrint fg=black bg=yellow msg="This is a test message black font on yellow background"
-colorPrint fg=black bg=lightGreen msg="This is a test message black font on light green background"
-colorPrint fg=white bg=magenta msg="This is a test message white font on magenta background"
-colorPrint fg=black bg=cyan msg="This is a test message black font on cyan background"
+if [[ -n $SHOW_COLORS ]]; then
 
-t="this is a line with a linefeed\nthere it was!"
+#colorPrint fg=red bg=white msg="This is a test message in red font on white background"
+#colorPrint fg=blue bg=white msg="This is a test message blue font on white background"
+#colorPrint fg=black bg=yellow msg="This is a test message black font on yellow background"
+#colorPrint fg=black bg=lightGreen msg="This is a test message black font on light green background"
+#colorPrint fg=white bg=magenta msg="This is a test message white font on magenta background"
+#colorPrint fg=black bg=cyan msg="This is a test message black font on cyan background"
 
-colorPrint fg=white bg=magenta msg="$t"
+#t="this is a line with a linefeed\nthere it was!"
+#colorPrint fg=white bg=magenta msg="$t"
 
 bgCount=${#colors[@]}
 (( bgCount-- ))
@@ -153,6 +207,10 @@ fgCount=$bgCount
 
 echo fgCount: $fgCount
 echo bgCount: $bgCount
+
+# 0: all background colors on separate lines
+# 1: each backround color on one line
+lineFeeds=0
 
 for bgIDX in $( seq 0 $bgCount )
 do
@@ -163,15 +221,22 @@ do
 			#echo "foreground: ${colorNum[$fgIDX]}"
 			#echo "background: ${colorNum[$bgIDX]}"
 
-			colorPrint fg="${colorNum[$fgIDX]}" bg="${colorNum[$bgIDX]}" msg="${colorNum[$fgIDX]} text on ${colorNum[$bgIDX]} background"
+			if [[ $lineFeeds -eq 0 ]]; then
+				separator=' | '
+			else
+				separator=''
+			fi
+			
+			colorPrint lf=$lineFeeds fg="${colorNum[$fgIDX]}" bg="${colorNum[$bgIDX]}" msg="${colorNum[$fgIDX]} text on ${colorNum[$bgIDX]} background${separator}"
 		fi
 	done
+
+	[[ $lineFeeds -eq 0 ]] && colorPrint lf=1
 
 done
 
 echo "-- end of testing --"
 
-#DISABLE-TEST
-
+fi
 
 

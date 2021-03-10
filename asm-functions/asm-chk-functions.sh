@@ -147,6 +147,13 @@ runCmd () {
 	fi
 }
 
+# from statpro .bash_profile
+dba() {
+	unset TWO_TASK
+	export SQLPATH=/home/oracle/scripts
+}
+
+
 ######################################
 # Internal Housekeeping
 # Setup and check Commands to use

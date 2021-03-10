@@ -292,6 +292,22 @@ fi
 
 rm -f $utFileName
 
+ut 'Validate directory - Read permissions - should succeed'
+
+validateFile ./ x
+rc=$?
+
+if [[ $rc -eq 0 ]]; then
+	typeset msg="validateFile ./ for Read succeeded"
+	echo "$msg"
+	logger "$msg"
+else
+	typeset msg="validateFile ./ for Read failed with exit code: $rc"
+	echo "$msg"
+	logger "$msg"
+	exit 1
+fi
+
 showLogFile
 
 echo =======================================================

@@ -1,10 +1,19 @@
-head	1.1;
+head	1.3;
 access;
 symbols;
-locks
-	jkstill:1.1; strict;
+locks; strict;
 comment	@# @;
 
+
+1.3
+date	2019.01.22.02.55.22;	author jkstill;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2019.01.22.02.53.09;	author jkstill;	state Exp;
+branches;
+next	1.1;
 
 1.1
 date	2016.01.01.23.34.35;	author jkstill;	state Exp;
@@ -17,9 +26,9 @@ desc
 @
 
 
-1.1
+1.3
 log
-@Initial revision
+@use a dual mode function to process the args
 @
 text
 @#!/bin/bash
@@ -58,6 +67,27 @@ fdiv () {
 }
 
 
+
+f() {
+	echo 'jeremiah was a bullfrog'
+}
+
+# this method is clever
+# https://www.linuxjournal.com/content/return-values-bash-functions
+# I knew about passing the var name, but did not think to combine the methods like this
+
+function myfunc()
+{
+	local  __resultvar=$1
+	local  myresult='some value'
+	if [[ "$__resultvar" ]]; then
+		eval $__resultvar="'$myresult'"
+	else
+		echo "$myresult"
+	fi
+}
+
+
 fmult 6 7
 fdiv 42 13
 fadd 2 2
@@ -71,4 +101,34 @@ do
 done
 
 
+echo
+echo "Use dual methods with 1 function in myfunc"
+echo
+
+myfunc result
+echo $result
+result2=$(myfunc)
+echo $result2
+
+
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@d42 15
+d70 9
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d37 6
+d54 1
 @
