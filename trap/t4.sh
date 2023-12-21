@@ -1,4 +1,4 @@
-:
+#!/usr/bin/env bash
 
 # test trap usage
 
