@@ -30,5 +30,9 @@ setArray testArray
 
 showArray testArray
 
+for el in "${testArray[@]}"
+do
+	echo  "array: $el"
+done
 
 
