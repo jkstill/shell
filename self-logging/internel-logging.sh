@@ -29,6 +29,10 @@ exec 2> >(tee -ia $logFile >&2)
 # if you would like to see the commands
 # set -v
 
+# reset the channels
+exec 1>&1
+exec 2>&1
+
 ls -l /
 
 date
