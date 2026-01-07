@@ -2,7 +2,7 @@
 
 declare DEBUG=${DEBUG:-'N'}
 
-set -auo pipefail
+set -Tauo pipefail
 
 << COMMENT
 
@@ -23,10 +23,10 @@ debugMsg () {
 	}
 }
 
-[[ $DEBUG == 'Y' ]] && trap 'echo "# $LINENO:$BASH_LINENO main() - $BASH_COMMAND";read' DEBUG
+# use main() unless in a function
+[[ $DEBUG == 'Y' ]] && trap 'echo "# $LINENO:$BASH_LINENO ${FUNCNAME[0]}() - $BASH_COMMAND";read' DEBUG
 
 f1 () {
-	[[ $DEBUG == 'Y' ]] && trap 'echo "# $LINENO:$BASH_LINENO f1() - $BASH_COMMAND";read' DEBUG
 	debugMsg "In f1()"
 	debugMsg "Calling date"
 	date
@@ -37,13 +37,17 @@ ssEval () {
 	local lineno=$1
 	local bash_lineno=$2
 	shift 2
-	echo "# $lineno:$bash_lineno $(caller) - $*"	
+	echo "# ${FUNCNAME[0]} $lineno:$bash_lineno $(caller) - |$*|"	
 	read
-	echo "eval:  $(eval "$*")"
+	echo -n "${FUNCNAME[0]}: "
+	# when the passed command is 1++, it needs to be eval'ed in a subshell to avoid affecting the main shell
+	( eval "$*" )
+	# the following would affect the main shell
+	#eval "$*" 
 }
 
 
-debugMsg "In main()"
+debugMsg "In main?: ${FUNCNAME[0]}"
 debugMsg "Calling date, f1"
 date
 f1
