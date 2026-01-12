@@ -2,6 +2,11 @@
 
 set -u
 
+spinnerName=${1:-"dots"}
+sleepTime=${2:-5}
+
+#echo "Sleeping for $sleepTime seconds with spinner..."
+
 # look in current directory first
 spinnerScript='./spinner.sh'
 
@@ -15,7 +20,6 @@ spinnerScript='./spinner.sh'
 
 source "$spinnerScript"
 
-spinnerName=${1:-"dots"}
 
 while getopts h arg; do
 	case $arg in
@@ -40,6 +44,6 @@ cleanup_main() {
 }
 trap cleanup_main INT TERM EXIT
 
-sleep 5
+sleep "$sleepTime"
 
 
