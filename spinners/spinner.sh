@@ -110,7 +110,7 @@ spinner() {
 	local spinnerData=()
 	#echo "spinnerFile: ${spinnerFile}" >&2
 
-	readarray spinnerData < <($JQ --arg k $spinnerName '.[$k].frames[]' $spinnerFile 2>/dev/null ) 2>/dev/null || {
+	readarray spinnerData < <($JQ -r --arg k $spinnerName '.[$k].frames[]' $spinnerFile 2>/dev/null ) 2>/dev/null || {
 		echo "Could not parse spinner data for spinner: $spinnerName" >&2
 		return 1
 	}
