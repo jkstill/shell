@@ -10,11 +10,10 @@ This is in no way a complete explanation of Parameter Expansion, but rather a fe
 
 Read the man page for more details, and you will see that parameter expansion is a very powerful feature of Bash.
 
-Most of the examples here are in reference to to the following:
+Most examples here are in reference to the following:
 
 - setting default values for variables
 - string manipulation
-- array manipulation
 
 A full treatment of parameter expansion is beyond the scope of this document, and it would be quite a lengthy document indeed.
 
@@ -318,6 +317,107 @@ The length of the string is: 13
   - Remove Largest Suffix Pattern
 
 
+Keep the following in mind when using these expansions:
+
+`%` and `%%` remove from the end of the string (suffix)
+
+`#` and `##` remove from the beginning of the string (prefix)
+
+When there is a single symbol (`%` or `#`), the smallest matching pattern is removed.
+
+When there are double symbols (`%%` or `##`), the largest matching pattern is removed.
+
+Even with explanations, using these expansions can be confusing. It does take some practice to get used to them.
+
+The following filename is used in these examples: 'benoit-01_backup_20240615-153045.tar.gz'
+
+#### Remove the largest prefix pattern
+
+```bashbash
+myFile="benoit-01_backup_20240615-153045.tar.gz"
+noPrefix="${myFile##*_}"
+echo "noPrefix: $noPrefix"
+```
+This will remove everything up to and including the last underscore, resulting in:
+```
+noPrefix: 20240615-153045.tar.gz
+```
+
+#### Remove the smallest prefix pattern
+
+```bash
+myFile="benoit-01_backup_20240615-153045.tar.gz"
+noPrefix="${myFile#*_}"
+echo "noPrefix: $noPrefix"
+
+```
+This will remove everything up to and including the first underscore, resulting in:
+```
+noPrefix: backup_20240615-153045.tar.gz
+```
+
+#### Remove the largest suffix pattern
+
+```bashbash
+myFile="benoit-01_backup_20240615-153045.tar.gz"
+noSuffix="${myFile%%.*}"
+echo "noSuffix: $noSuffix"
+```
+This will remove everything from the first dot to the end, resulting in:
+```
+noSuffix: benoit-01_backup_20240615-153045
+```
+#### Remove the smallest suffix pattern
+
+```bash
+myFile="benoit-01_backup_20240615-153045.tar.gz"
+noSuffix="${myFile%.*}"
+echo "noSuffix: $noSuffix"
+```
+This will remove everything from the last dot to the end, resulting in:
+
+```
+noSuffix: benoit-01_backup_20240615-153045.tar
+```
+
+#### Extract information from the filename
+
+pe08.sh:
+
+```bash
+#!/usr/bin/env bash
+
+myFile="benoit-01_backup_20240615-153045.tar.gz"
+
+# get the greatest suffix after the first dot
+extension="${myFile#*.}"
+
+echo "extension: $extension"
+
+# get the filename without the extension
+filename="${myFile%%.*}"
+echo "filePart: $filename"
+
+IFS='_' read -r server fileType timeStamp <<< "$filename"
+
+echo "server: $server"
+echo "fileType: $fileType"
+echo "timeStamp: $timeStamp"
+```
+
+Results:
+
+```bash
+$  ./pe08.sh
+extension: tar.gz
+filePart: benoit-01_backup_20240615-153045
+server: benoit-01
+fileType: backup
+timeStamp: 20240615-153045
+```
+
+#### Example Script
+
 The following script will use matching prefix and suffix patterns to derive information from a backup file name.
 
 pe07.sh:
@@ -458,69 +558,36 @@ sys	18m5.258s
 ```
 
 
-## Arrays
+There are many methods that could be used for this. 
 
-### Array Slicing with Parameter Expansion
-This can be used to extract slices from arrays.
-pe06.sh:
+Yet another method is found in `pe07-function.sh`, which uses `read -a -r` to split the filename into an array.
 
-```bash#!/usr/bin/env bash
-#!/usr/bin/env bash
-echo "declare -a ary=( the quick brown fox jumps over the lazy dog )"
-declare -a ary=( the quick brown fox jumps over the lazy dog )
-# show all words using a for loop
-echo
-echo "All words in the array:"
-i=0
-for word in "${ary[@]}"; do
-      printf "  %02d: %s\n"  $i $word
-      (( ++i ))
-done
-echo
-echo "get a slice of the array with parameter expansion"
-slice=("${ary[@]:2:4}")
-echo "The slice is: ${slice[@]}"
-echo
+At 25 seconds, there is still a significant performance difference this and using parameter expansion.
+
+```bash
+$  ./pe07-function.sh
+
+Assume a server name of benoit-01.example.com
+
+The file name is created with this template:
+$(hostname -s)_backup_$(date +%Y%m%d-%H%M%S).tar.gz
+
+filename example: backups/db/benoit-01_backup_20240615-153045.tar.gz
+
+real	0m25.181s
+user	0m14.395s
+sys	0m8.924s
+
+         Filename: benoit-01_backup_20240615-153045.tar.gz
+      Server name: benoit-01
+        File type: backup
+ Backup timestamp: 20240615-153045
+        Extension: tar.gz
 ```
 
+## Conclusion
 
-### ${parameter:offset} ${parameter:offset:length}
-
-This expansion appears again, but this time in array context.
-
-pe05-b.sh:
-
-```bash#!/usr/bin/env bash 
-#!/usr/bin/env bash
-
-echo "declare -a ary=( the quick brown fox jumps over the lazy dog )"
-
-declare -a ary=( the quick brown fox jumps over the lazy dog )
-
-# show all words using a for loop
-echo
-echo "All words in the array:"
-i=0
-for word in "${ary[@]}"; do
-	  printf "  %02d: %s\n"  $i $word
-	  (( ++i ))
-done
-
-echo
-echo "get the fourth word with parameter expansion"
-word="${ary[@]:3:1}"
-echo "The fourth word is: $word"
-echo
-
-echo "get the fifth sixth words with parameter expansion"
-word="${ary[@]:4:2}"
-echo "The fifth sixth words are: $word"
-echo 
-
-```
-
-# ${#parameter} Parameter Length
-
-
+Parameter expansion is a powerful feature of Bash that can be used for a variety of tasks, including setting default values, string manipulation, and error handling.
+By mastering parameter expansion, you can write more efficient and robust shell scripts.
 
 
