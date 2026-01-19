@@ -18,12 +18,13 @@ Most of the examples here are in reference to to the following:
 
 A full treatment of parameter expansion is beyond the scope of this document, and it would be quite a lengthy document indeed.
 
+This document and scripts are found at: (Parameter Expansion)[https://github.com/jkstill/shell/tree/main/parameter-expansion]
 
 ## Use Default Values
 
 - ${parameter:-word} 
 
-Use Default Values.  If parameter is unset or null, the expansion of word is substituted.  Otherwise, the value of parameter is substituted.
+If parameter is unset or null, the expansion of word is substituted.  Otherwise, the value of parameter is substituted.
 
 You can use this to provide default values for variables that may not be set.
 
@@ -433,9 +434,28 @@ sys	0m0.005s
 
 The same logic implemented with 'cut' and 'awk' runs in several (as yet unknown) minutes.
 
-A quick guestimate is that the version using cut, awd and sed is going to take about 55 minutes. 
+The linux tools version took slightly longer, at 24 minutes and 22 seconds.
 
-Before it completes, I expect my pizza will arrive, and I will be halfway through it and my beer before the script finishes.
+```bash
+$  ./pe07-linux-tools.sh
+
+Assume a server name of benoit-01.example.com
+
+The file name is created with this template:
+$(hostname -s)_backup_$(date +%Y%m%d-%H%M%S).tar.gz
+
+filename example: benoit-01_backup_20240615-153045.tar.gz
+
+real	24m22.601s
+user	14m49.115s
+sys	18m5.258s
+
+         Filename: benoit-01_backup_20240615-153045.tar.gz
+      Server name: benoit-01
+        File type: backup
+ Backup timestamp: 20240615-153045
+        Extension: tar.gz
+```
 
 
 ## Arrays
