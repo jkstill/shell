@@ -1,0 +1,60 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{array}
+\usepackage{ragged2e}
+
+% Make inline code readable
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\title{Bash Parameter Expansion. Utility Mapping Table}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\lstinline!p="/var/log/nginx/access.log"!\\
+\lstinline!v="a:b:c"!\\
+
+\begin{longtable}{p{0.30\textwidth} >{\RaggedRight\arraybackslash}p{0.34\textwidth} >{\RaggedRight\arraybackslash}p{0.34\textwidth}}
+\toprule
+Task & Parameter expansion & Common external form \\
+\midrule
+\endfirsthead
+
+\toprule
+Task & Parameter expansion & Common external form \\
+\midrule
+\endhead
+
+basename of path     & \lstinline!${p##*/}!      & \lstinline!basename -- "$p"! \\
+dirname of path      & \lstinline!${p%/*}!       & \lstinline!dirname -- "$p"! \\
+remove extension     & \lstinline!${p%.*}!       & \lstinline!sed 's/\.[^./]*$//'! \\
+extension only       & \lstinline!${p##*.}!      & \lstinline!awk -F. '{print $NF}'! \\
+first field by :     & \lstinline!${v%%:*}!      & \lstinline!cut -d: -f1! \\
+rest after first :   & \lstinline!${v#*:}!       & \lstinline!cut -d: -f2-! \\
+last field by :      & \lstinline!${v##*:}!      & \lstinline!awk -F: '{print $NF}'! \\
+before last :        & \lstinline!${v%:*}!       & \lstinline!sed 's/:[^:]*$//'! \\
+replace first match  & \lstinline!${v/a/b}!      & \lstinline!sed 's/a/b/'! \\
+replace all matches  & \lstinline!${v//a/b}!     & \lstinline!sed 's/a/b/g'! \\
+lowercase            & \lstinline!${v,,}!        & \lstinline!tr '[:upper:]' '[:lower:]'! \\
+uppercase            & \lstinline!${v^^}!        & \lstinline!tr '[:lower:]' '[:upper:]'! \\
+substring            & \lstinline!${v:pos:len}!  & \lstinline!awk 'substr($0,pos+1,len)'! \\
+length               & \lstinline!${#v}!         & \lstinline!wc -c! \\
+
+\bottomrule
+\end{longtable}
+
+\end{document}

@@ -1,0 +1,249 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{titlesec}
+
+\geometry{margin=1in}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{keyword}{RGB}{0,0,150}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\titleformat{\section}{\Large\bfseries}{}{0em}{}
+\titleformat{\subsection}{\large\bfseries}{}{0em}{}
+
+\title{Bash Parameter Expansion Cheat Sheet}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Why Parameter Expansion Matters}
+
+Bash parameter expansion performs string manipulation entirely inside the shell.
+This avoids process creation overhead from utilities such as \texttt{basename},
+\texttt{dirname}, \texttt{cut}, \texttt{sed}, and \texttt{awk}.
+
+In tight loops or scripts processing tens of thousands of strings, replacing
+external commands with parameter expansion can reduce runtime from minutes to seconds.
+
+\section{General Notes}
+
+\begin{itemize}
+\item Operates on shell variables only.
+\item Patterns use shell globs, not regular expressions.
+\item Always quote expansions unless word splitting is desired.
+\item Best suited for simple delimiter- and suffix-based transforms.
+\end{itemize}
+
+\section{Prefix and Suffix Removal}
+
+\subsection{Syntax Summary}
+
+\begin{longtable}{lll}
+\toprule
+Form & Meaning & Match Type \\
+\midrule
+\texttt{\$\{v\#pattern\}}   & Remove from start & Shortest \\
+\texttt{\$\{v\#\#pattern\}} & Remove from start & Longest \\
+\texttt{\$\{v\%pattern\}}   & Remove from end   & Shortest \\
+\texttt{\$\{v\%\%pattern\}} & Remove from end   & Longest \\
+\bottomrule
+\end{longtable}
+
+\subsection{Examples}
+
+\begin{lstlisting}
+v="aa/bb/cc.txt"
+
+${v#*/}      -> bb/cc.txt
+${v##*/}     -> cc.txt
+${v%/*}      -> aa/bb
+${v%%/*}     -> aa
+\end{lstlisting}
+
+\subsection{Comparison}
+
+\begin{tabular}{ll}
+\toprule
+Parameter Expansion & External Utility \\
+\midrule
+\texttt{\$\{p\#\#*/\}} & \texttt{basename p} \\
+\texttt{\$\{p\%/*\}} & \texttt{dirname p}  \\
+\bottomrule
+\end{tabular}
+
+\section{Basename, Dirname, Extensions}
+
+\subsection{Common Patterns}
+
+\begin{lstlisting}
+p="/var/log/nginx/access.log"
+
+base=${p##*/}     # access.log
+dir=${p%/*}       # /var/log/nginx
+stem=${base%.*}   # access
+ext=${base##*.}   # log
+\end{lstlisting}
+
+\subsection{Utility Comparison}
+
+\begin{lstlisting}
+basename -- "$p"
+dirname  -- "$p"
+\end{lstlisting}
+
+Parameter expansion is dramatically faster when used repeatedly inside loops.
+
+\section{Substring Extraction}
+
+\subsection{By Position}
+
+\begin{lstlisting}
+s="abcdef"
+
+${s:2}     -> cdef
+${s:2:3}   -> cde
+${s: -2}   -> ef
+\end{lstlisting}
+
+\subsection{Comparison}
+
+\begin{lstlisting}
+awk '{print substr($0,3,3)}'
+\end{lstlisting}
+
+Prefer expansion when positions are fixed and data is already in variables.
+
+\section{Search and Replace}
+
+\subsection{Syntax}
+
+\begin{longtable}{ll}
+\toprule
+Form & Meaning \\
+\midrule
+\texttt{\$\{v/pat/repl\}}    & Replace first match \\
+\texttt{\$\{v//pat/repl\}}   & Replace all matches \\
+\texttt{\$\{v/\#pat/repl\}}  & Replace at start \\
+\texttt{\$\{v/\%pat/repl\}}  & Replace at end \\
+\bottomrule
+\end{longtable}
+
+\subsection{Examples}
+
+\begin{lstlisting}
+v="a-b-c"
+
+${v/-/_}     -> a_b-c
+${v//-/_}    -> a_b_c
+\end{lstlisting}
+
+\subsection{Comparison}
+
+\begin{lstlisting}
+sed 's/-/_/'
+sed 's/-/_/g'
+\end{lstlisting}
+
+Use \texttt{sed} if regular expressions or capture groups are required.
+
+\section{Case Conversion}
+
+(Bash 4+)
+
+\begin{lstlisting}
+v="MiXeD"
+
+${v,,}   -> mixed
+${v^^}   -> MIXED
+${v,}    -> miXeD
+${v^}    -> MiXeD
+\end{lstlisting}
+
+\subsection{Comparison}
+
+\begin{lstlisting}
+tr '[:upper:]' '[:lower:]'
+\end{lstlisting}
+
+\section{Defaults, Errors, and Conditionals}
+
+\begin{longtable}{ll}
+\toprule
+Form & Meaning \\
+\midrule
+\texttt{\$\{v:-d\}} & Use default if unset or empty \\
+\texttt{\$\{v:=d\}} & Assign default if unset or empty \\
+\texttt{\$\{v:?msg\}} & Error if unset or empty \\
+\texttt{\$\{v:+alt\}} & Use alt if set \\
+\bottomrule
+\end{longtable}
+
+\section{Length}
+
+\begin{lstlisting}
+len=${#v}
+\end{lstlisting}
+
+\subsection{Comparison}
+
+\begin{lstlisting}
+wc -c <<<"$v"
+\end{lstlisting}
+
+\section{Whitespace Trimming (Advanced)}
+
+Pure parameter expansion trimming is possible but verbose:
+
+\begin{lstlisting}
+# leading
+v="${v#"${v%%[!$' \t\r\n']*}"}"
+# trailing
+v="${v%"${v##*[!$' \t\r\n']}"}"
+\end{lstlisting}
+
+For readability, consider wrapping this in a function.
+
+\section{When to Use What}
+
+\begin{longtable}{ll}
+\toprule
+Use Parameter Expansion & Use External Tools \\
+\midrule
+High iteration loops & Complex regex parsing \\
+Simple delimiters & Multi-field arithmetic \\
+Path manipulation & Streaming input \\
+Suffix/prefix logic & Readability over speed \\
+\bottomrule
+\end{longtable}
+
+\section{Mental Model Summary}
+
+\begin{itemize}
+\item \texttt{\#} removes from the left
+\item \texttt{\%} removes from the right
+\item doubling (\texttt{\#\#}, \texttt{\%\%}) means ``greedy''
+\item replacements are glob-based, not regex-based
+\end{itemize}
+
+\end{document}

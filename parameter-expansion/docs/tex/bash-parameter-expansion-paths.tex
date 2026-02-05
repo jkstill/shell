@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\title{Bash Path Munging with Parameter Expansion}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Core patterns}
+\begin{lstlisting}
+p="/a/b/c.txt"
+
+base=${p##*/}     # c.txt
+dir=${p%/*}       # /a/b
+stem=${base%.*}   # c
+ext=${base##*.}   # txt
+\end{lstlisting}
+
+\section{Common transforms}
+\subsection{Get the parent directory name}
+\begin{lstlisting}
+parent=${dir##*/}   # b
+\end{lstlisting}
+
+\subsection{Replace extension}
+\begin{lstlisting}
+new="${dir}/${stem}.csv"
+\end{lstlisting}
+
+\subsection{Strip a mount prefix}
+\begin{lstlisting}
+p="/mnt/data/project/file.sql"
+rel=${p#/mnt/data/}  # project/file.sql
+\end{lstlisting}
+
+\subsection{Ensure trailing slash removal}
+\begin{lstlisting}
+d="/tmp/work/"
+d=${d%/}             # /tmp/work
+\end{lstlisting}
+
+\subsection{Ensure leading slash removal}
+\begin{lstlisting}
+x="/etc/passwd"
+x=${x#/}             # etc/passwd
+\end{lstlisting}
+
+\subsection{Get Nth directory segment (simple two-step examples)}
+\begin{lstlisting}
+p="/a/b/c/d.txt"
+first=${p#/}         # a/b/c/d.txt
+seg1=${first%%/*}    # a
+rest=${first#*/}     # b/c/d.txt
+seg2=${rest%%/*}     # b
+\end{lstlisting}
+
+If you need arbitrary N, use arrays or IFS+read.
+
+\section{Mapping for basename and dirname}
+\begin{longtable}{p{0.45\textwidth}p{0.45\textwidth}}
+\toprule
+Parameter expansion & External command \\
+\midrule
+\texttt{base=\$\{p\#\#*/\}} & \texttt{base=\$(basename -- "\$p")} \\
+\texttt{dir=\$\{p\%/*\}} & \texttt{dir=\$(dirname -- "\$p")} \\
+\texttt{stem=\$\{base\%.*\}} & \texttt{stem=\$(basename -- "\$p" ."\$ext")} \\
+\bottomrule
+\end{longtable}
+
+\section{Path-safe habits}
+\begin{itemize}
+\item Quote expansions: \texttt{"\$p"}.
+\item Prefer \texttt{--} with external utilities when you must use them.
+\item Fail fast for required variables: \texttt{: "\$\{p:?need p\}"}.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,124 @@
+\documentclass[10pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=0.6in]{geometry}
+\usepackage{xcolor}
+\usepackage{multicol}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Bash Parameter Expansion Quick Reference}\\
+{\small Focus. String and path munging without external processes}
+\end{center}
+
+\begin{multicols}{3}
+
+\section*{Trim operators}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Form & Meaning \\
+\midrule
+\texttt{\$\{v\#p\}} & trim left, shortest \\
+\texttt{\$\{v\#\#p\}} & trim left, longest \\
+\texttt{\$\{v\%p\}} & trim right, shortest \\
+\texttt{\$\{v\%\%p\}} & trim right, longest \\
+\bottomrule
+\end{tabular}
+
+\section*{Path basics}
+\begin{lstlisting}
+p="/a/b/c.txt"
+base=${p##*/}    # c.txt
+dir=${p%/*}      # /a/b
+stem=${base%.*}  # c
+ext=${base##*.}  # txt
+parent=${dir##*/}# b
+\end{lstlisting}
+
+\section*{Delimiter splits}
+\begin{lstlisting}
+v="a:b:c"
+left=${v%%:*}    # a
+right=${v#*:}    # b:c
+last=${v##*:}    # c
+prelast=${v%:*}  # a:b
+\end{lstlisting}
+
+\section*{Substring}
+\begin{lstlisting}
+s="abcdef"
+${s:2}     # cdef
+${s:2:3}   # cde
+${s: -2}   # ef
+\end{lstlisting}
+
+\section*{Replace}
+\begin{lstlisting}
+v="a-b-c"
+${v/-/_}      # a_b-c
+${v//-/_}     # a_b_c
+${v/#a/A}     # A-b-c
+${v/%c/C}     # a-b-C
+\end{lstlisting}
+
+\section*{Case (bash 4+)}
+\begin{lstlisting}
+v="MiXeD"
+${v,,}  # mixed
+${v^^}  # MIXED
+${v,}   # miXeD
+${v^}   # MiXeD
+\end{lstlisting}
+
+\section*{Defaults and errors}
+\begin{lstlisting}
+: "${x:=default}"   # set if empty
+: "${x:-default}"   # use only
+: "${x:?need x}"    # error if empty
+: "${x:+alt}"       # alt if set
+\end{lstlisting}
+
+\section*{Length}
+\begin{lstlisting}
+len=${#v}
+\end{lstlisting}
+
+\section*{Whitespace trim}
+\begin{lstlisting}
+v="${v#"${v%%[!$' \t\r\n']*}"}"
+v="${v%"${v##*[!$' \t\r\n']}"}"
+\end{lstlisting}
+
+\section*{What replaces what}
+\begin{tabular}{@{}p{0.46\columnwidth}p{0.46\columnwidth}@{}}
+\toprule
+Expansion & External \\
+\midrule
+\texttt{\$\{p\#\#*/\}}  & \texttt{basename} \\
+\texttt{\$\{p\%/*\}}    & \texttt{dirname} \\
+\texttt{\$\{v\%\%:*\}}  & \texttt{cut -d: -f1} \\
+\texttt{\$\{v\#*:\}}    & \texttt{cut -d: -f2-} \\
+\texttt{\$\{v//a/b\}}   & \texttt{sed s/a/b/g} \\
+\texttt{\$\{v,,\}}      & \texttt{tr A-Z a-z} \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+\end{document}

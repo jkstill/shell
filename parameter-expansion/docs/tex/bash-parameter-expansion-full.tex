@@ -1,0 +1,247 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{titlesec}
+
+\geometry{margin=1in}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\titleformat{\section}{\Large\bfseries}{}{0em}{}
+\titleformat{\subsection}{\large\bfseries}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{Bash Parameter Expansion Cheat Sheet (Full Reference)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Why this exists}
+Bash parameter expansion does string manipulation inside the shell. It avoids process creation overhead from utilities such as
+\texttt{basename}, \texttt{dirname}, \texttt{cut}, \texttt{sed}, \texttt{awk}, and \texttt{tr}.
+In tight loops, replacing external commands with expansions can reduce runtime dramatically.
+
+\section{Rules of thumb}
+\begin{itemize}
+\item Parameter expansion operates on variables, not streaming input.
+\item Patterns are shell globs, not regular expressions.
+\item Quote expansions unless you explicitly want word splitting or globbing.
+\item Use expansions for simple delimiter and suffix transforms. Use \texttt{awk}/\texttt{sed} for regex-heavy parsing.
+\end{itemize}
+
+\section{Core operators for trimming}
+\subsection{Prefix and suffix removal}
+\begin{longtable}{lll}
+\toprule
+Form & Meaning & Match type \\
+\midrule
+\texttt{\$\{v\#pattern\}}   & remove from start & shortest \\
+\texttt{\$\{v\#\#pattern\}} & remove from start & longest \\
+\texttt{\$\{v\%pattern\}}   & remove from end   & shortest \\
+\texttt{\$\{v\%\%pattern\}} & remove from end   & longest \\
+\bottomrule
+\end{longtable}
+
+\subsection{Mental model}
+\begin{itemize}
+\item \texttt{\#} trims from the left.
+\item \texttt{\%} trims from the right.
+\item doubling means greedy.
+\item patterns are globs such as \texttt{*}, \texttt{?}, and \texttt{[abc]}.
+\end{itemize}
+
+\subsection{Examples}
+\begin{lstlisting}
+v="aa/bb/cc.txt"
+
+${v#*/}    -> bb/cc.txt
+${v##*/}   -> cc.txt
+${v%/*}    -> aa/bb
+${v%%/*}   -> aa
+\end{lstlisting}
+
+\section{Path munging cookbook}
+Assume:
+\begin{lstlisting}
+p="/var/log/nginx/access.log"
+\end{lstlisting}
+
+\subsection{Basename and dirname}
+\begin{lstlisting}
+base=${p##*/}   # access.log
+dir=${p%/*}     # /var/log/nginx
+\end{lstlisting}
+
+Utility equivalents:
+\begin{lstlisting}
+base=$(basename -- "$p")
+dir=$(dirname -- "$p")
+\end{lstlisting}
+
+\subsection{Extension and stem}
+\begin{lstlisting}
+stem=${base%.*}   # access
+ext=${base##*.}   # log
+\end{lstlisting}
+
+For multi-extensions:
+\begin{lstlisting}
+f="archive.tar.gz"
+stem1=${f%.*}     # archive.tar
+ext1=${f##*.}     # gz
+stem2=${f%%.*}    # archive
+\end{lstlisting}
+
+\subsection{Parent directory name (last segment of dirname)}
+\begin{lstlisting}
+parent=${dir##*/}   # nginx
+\end{lstlisting}
+
+\subsection{Join, normalize, and guard}
+\begin{lstlisting}
+# join pieces safely
+out="${dir}/${stem}.csv"
+
+# ensure non-empty before use (fails fast)
+: "${p:?path required}"
+
+# default if empty
+: "${dir:=.}"
+\end{lstlisting}
+
+\subsection{Strip a known prefix if present}
+\begin{lstlisting}
+x="/mnt/data/file.txt"
+y=${x#/mnt/}     # data/file.txt
+\end{lstlisting}
+
+\subsection{Strip a known suffix if present}
+\begin{lstlisting}
+x="report.csv.bak"
+y=${x%.bak}      # report.csv
+\end{lstlisting}
+
+\subsection{Remove everything up to the first slash}
+\begin{lstlisting}
+x="a/b/c"
+y=${x#*/}        # b/c
+\end{lstlisting}
+
+\subsection{Remove everything after the last slash}
+\begin{lstlisting}
+x="a/b/c"
+y=${x%/*}        # a/b
+\end{lstlisting}
+
+\subsection{Split around delimiters, cut-style}
+\begin{lstlisting}
+v="host01.domain.com"
+short=${v%%.*}   # host01
+rest=${v#*.}     # domain.com
+\end{lstlisting}
+
+\section{Substring extraction}
+\subsection{By position}
+\begin{lstlisting}
+s="abcdef"
+
+${s:2}     -> cdef
+${s:2:3}   -> cde
+${s: -2}   -> ef   # note the space before -2
+\end{lstlisting}
+
+\section{Search and replace}
+\begin{longtable}{ll}
+\toprule
+Form & Meaning \\
+\midrule
+\texttt{\$\{v/pat/repl\}}    & replace first match \\
+\texttt{\$\{v//pat/repl\}}   & replace all matches \\
+\texttt{\$\{v/\#pat/repl\}}  & replace at start \\
+\texttt{\$\{v/\%pat/repl\}}  & replace at end \\
+\bottomrule
+\end{longtable}
+
+\subsection{Examples}
+\begin{lstlisting}
+v="a-b-c"
+${v/-/_}     -> a_b-c
+${v//-/_}    -> a_b_c
+
+p="/a/b/c.txt"
+${p//\//_}   -> _a_b_c.txt
+\end{lstlisting}
+
+\subsection{Compare to sed}
+\begin{lstlisting}
+sed 's/-/_/'     # first
+sed 's/-/_/g'    # all
+\end{lstlisting}
+
+Use \texttt{sed} when you need regex capture groups or complex patterns.
+
+\section{Case conversion (bash 4+)}
+\begin{lstlisting}
+v="MiXeD"
+${v,,}   -> mixed
+${v^^}   -> MIXED
+${v,}    -> miXeD
+${v^}    -> MiXeD
+\end{lstlisting}
+
+\section{Defaults, errors, conditionals}
+\begin{longtable}{ll}
+\toprule
+Form & Meaning \\
+\midrule
+\texttt{\$\{v:-d\}}   & use d if unset or empty, do not assign \\
+\texttt{\$\{v:=d\}}   & assign d if unset or empty \\
+\texttt{\$\{v:?msg\}} & error if unset or empty \\
+\texttt{\$\{v:+alt\}} & use alt if set and non-empty \\
+\bottomrule
+\end{longtable}
+
+\section{Length}
+\begin{lstlisting}
+len=${#v}
+\end{lstlisting}
+
+\section{Whitespace trimming (verbose, glob-based)}
+\begin{lstlisting}
+# leading
+v="${v#"${v%%[!$' \t\r\n']*}"}"
+# trailing
+v="${v%"${v##*[!$' \t\r\n']}"}"
+\end{lstlisting}
+
+\section{When to use what}
+\begin{longtable}{p{0.48\textwidth}p{0.48\textwidth}}
+\toprule
+Prefer parameter expansion & Prefer external tools \\
+\midrule
+tight loops, thousands of iterations & complex regex parsing \\
+simple delimiters, suffix/prefix logic & multi-field logic, arithmetic \\
+path manipulation and renaming & streaming text pipelines \\
+\bottomrule
+\end{longtable}
+
+\end{document}
